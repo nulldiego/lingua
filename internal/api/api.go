@@ -2,37 +2,38 @@ package api
 
 import (
 	"errors"
-	"github.com/nulldiego/lingua/internal/dataset"
+	"github.com/nulldiego/lingua/internal/datasets"
+	"github.com/nulldiego/lingua/internal/records"
 	"gofr.dev/pkg/gofr"
 )
 
 func RegisterRoutes(app *gofr.App) {
-	app.POST("/datasets", postDataset)
-	app.GET("/datasets", getDatasets)
-	app.POST("/datasets/{id}/fields", postDatasetField)  // name, type
-	app.GET("/datasets/{id}/fields", getDatasetFields)   // name, type
-	app.GET("/datasets/{id}/records", getDatasetRecords) // paginated
-	app.PUT("/datasets/{id}/records/{id}", putDatasetRecord)
+	app.POST("/api/datasets", postDataset)
+	app.GET("/api/datasets", getDatasets)
+	app.POST("/api/datasets/{id}/fields", postDatasetField) // name, type
+	app.GET("/api/datasets/{id}/fields", getDatasetFields)  // name, type
+	app.GET("/api/datasets/{id}/records", getDatasetRecords)
+	app.PUT("/api/datasets/{id}/records/{id}", putDatasetRecord)
 }
 
 func postDataset(ctx *gofr.Context) (interface{}, error) {
-	return dataset.Create(ctx)
+	return datasets.Create(ctx)
 }
 
 func getDatasets(ctx *gofr.Context) (interface{}, error) {
-	return dataset.GetAll(ctx)
+	return datasets.GetAll(ctx)
 }
 
-func postDatasetField(_ *gofr.Context) (interface{}, error) {
-	return nil, errors.New("not implemented")
+func postDatasetField(ctx *gofr.Context) (interface{}, error) {
+	return datasets.CreateDatasetField(ctx)
 }
 
-func getDatasetFields(_ *gofr.Context) (interface{}, error) {
-	return nil, errors.New("not implemented")
+func getDatasetFields(ctx *gofr.Context) (interface{}, error) {
+	return datasets.GetDatasetFields(ctx)
 }
 
-func getDatasetRecords(_ *gofr.Context) (interface{}, error) {
-	return nil, errors.New("not implemented")
+func getDatasetRecords(ctx *gofr.Context) (interface{}, error) {
+	return records.GetDatasetRecords(ctx)
 }
 
 func putDatasetRecord(_ *gofr.Context) (interface{}, error) {

@@ -1,6 +1,6 @@
 module github.com/nulldiego/lingua
 
-go 1.22.2
+go 1.22
 
 require gofr.dev v1.5.0
 
