@@ -13,14 +13,46 @@ const (
 	querySelectDataset = "SELECT * FROM dataset WHERE id = ?"
 	queryCountContent  = "SELECT COUNT(line_number) FROM dataset_%d"
 	querySelectContent = "SELECT * FROM dataset_%d LIMIT %d,%d"
+	querySelectRecord  = "SELECT * from dataset_%d WHERE line_number = ?"
 )
 
 var errGetDataset = errors.New("couldn't get dataset")
+var errGetRecord = errors.New("couldn't get record")
 
 type DatasetContent struct {
 	datasets.Dataset
 	TotalItems int           `json:"total_items"`
 	Content    []interface{} `json:"content"`
+}
+
+type Record interface{}
+
+func GetRecord(ctx *gofr.Context) (Record, error) {
+	datasetId, err := strconv.Atoi(ctx.PathParam("id"))
+	if err != nil {
+		ctx.Logger.Errorf("error path param id: %v", err)
+		return nil, errGetRecord
+	}
+	recordId, err := strconv.Atoi(ctx.PathParam("recordId"))
+	if err != nil {
+		ctx.Logger.Errorf("error path param record id: %v", err)
+		return nil, errGetRecord
+	}
+
+	row, err := ctx.SQL.QueryContext(ctx, fmt.Sprintf(querySelectRecord, datasetId), recordId)
+	if err != nil {
+		ctx.Logger.Errorf("error query dataset record: %v", err)
+		return nil, errGetRecord
+	}
+	var record Record
+	record = rowsToJson(ctx, row)[0]
+
+	return record, nil
+}
+
+func UpdateRecord(ctx *gofr.Context) (interface{}, error) {
+
+	return nil, nil
 }
 
 func GetDatasetRecords(ctx *gofr.Context) (*DatasetContent, error) {

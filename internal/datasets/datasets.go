@@ -15,7 +15,7 @@ import (
 const (
 	queryInsertDataset = "INSERT INTO dataset (name, authors) VALUES (?, ?)"
 	querySelectAll     = "SELECT * FROM dataset"
-	queryDatasetFields = "SELECT column_name FROM information_schema.columns WHERE table_name = ?"
+	queryDatasetFields = "SELECT column_name, column_type FROM information_schema.columns WHERE table_name = ?"
 	queryInsertColumn  = "alter table dataset_%d add column (%s)"
 )
 
@@ -32,8 +32,9 @@ type Dataset struct {
 }
 
 type Field struct {
-	Name    string   `json:"name"`
-	Options []string `json:"options"` // options in case field is enum
+	Name       string   `json:"name"`
+	Options    []string `json:"options,omitempty"` // options in case field is enum
+	ColumnType string   `json:"-"`
 }
 
 func CreateDatasetField(ctx *gofr.Context) ([]Field, error) {
@@ -76,8 +77,12 @@ func GetDatasetFields(ctx *gofr.Context) ([]Field, error) {
 	}
 	for rows.Next() {
 		var field Field
-		if err := rows.Scan(&field.Name); err != nil {
+		if err := rows.Scan(&field.Name, &field.ColumnType); err != nil {
 			return nil, errObtainingDataset
+		}
+		if strings.HasPrefix(field.ColumnType, "enum") {
+			columnType := strings.ReplaceAll(field.ColumnType[5:len(field.ColumnType)-1], "'", "")
+			field.Options = strings.Split(columnType, ",")
 		}
 		fields = append(fields, field)
 	}
