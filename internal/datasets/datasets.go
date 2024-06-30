@@ -15,7 +15,7 @@ import (
 const (
 	queryInsertDataset = "INSERT INTO dataset (name, authors) VALUES (?, ?)"
 	querySelectAll     = "SELECT * FROM dataset"
-	queryDatasetFields = "SELECT column_name, column_type FROM information_schema.columns WHERE table_name = ?"
+	queryDatasetFields = "SELECT column_name, column_type, column_comment FROM information_schema.columns WHERE table_name = ? order by ordinal_position"
 	queryInsertColumn  = "alter table dataset_%d add column (%s)"
 )
 
@@ -34,6 +34,7 @@ type Dataset struct {
 type Field struct {
 	Name       string   `json:"name"`
 	Options    []string `json:"options,omitempty"` // options in case field is enum
+	Annotate   bool     `json:"annotate,omitempty"`
 	ColumnType string   `json:"-"`
 }
 
@@ -57,7 +58,7 @@ func CreateDatasetField(ctx *gofr.Context) ([]Field, error) {
 		if len(field.Options) > 0 {
 			columnType = fmt.Sprintf("ENUM('%s')", strings.Join(field.Options, "','"))
 		}
-		columns = append(columns, fmt.Sprintf("%s %s", columnName, columnType))
+		columns = append(columns, fmt.Sprintf("%s %s COMMENT 'user_defined'", columnName, columnType))
 	}
 	query := fmt.Sprintf(queryInsertColumn, datasetId, strings.Join(columns, ","))
 	_, err = ctx.SQL.ExecContext(ctx, query)
@@ -65,6 +66,7 @@ func CreateDatasetField(ctx *gofr.Context) ([]Field, error) {
 		ctx.Logger.Errorf("error insert columns: %v", err)
 		return nil, errCreateField
 	}
+
 	return GetDatasetFields(ctx)
 }
 
@@ -77,9 +79,11 @@ func GetDatasetFields(ctx *gofr.Context) ([]Field, error) {
 	}
 	for rows.Next() {
 		var field Field
-		if err := rows.Scan(&field.Name, &field.ColumnType); err != nil {
+		var comment string
+		if err := rows.Scan(&field.Name, &field.ColumnType, &comment); err != nil {
 			return nil, errObtainingDataset
 		}
+		field.Annotate = comment == "user_defined"
 		if strings.HasPrefix(field.ColumnType, "enum") {
 			columnType := strings.ReplaceAll(field.ColumnType[5:len(field.ColumnType)-1], "'", "")
 			field.Options = strings.Split(columnType, ",")
