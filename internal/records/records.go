@@ -7,6 +7,7 @@ import (
 	"github.com/nulldiego/lingua/internal/datasets"
 	"gofr.dev/pkg/gofr"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -14,10 +15,12 @@ const (
 	queryCountContent  = "SELECT COUNT(line_number) FROM dataset_%d"
 	querySelectContent = "SELECT * FROM dataset_%d LIMIT %d,%d"
 	querySelectRecord  = "SELECT * from dataset_%d WHERE line_number = ?"
+	queryUpdateRecord  = "UPDATE dataset_%d SET %s WHERE line_number = ?"
 )
 
 var errGetDataset = errors.New("couldn't get dataset")
 var errGetRecord = errors.New("couldn't get record")
+var errUpdateRecord = errors.New("couldn't update record")
 
 type DatasetContent struct {
 	datasets.Dataset
@@ -51,8 +54,44 @@ func GetRecord(ctx *gofr.Context) (Record, error) {
 }
 
 func UpdateRecord(ctx *gofr.Context) (interface{}, error) {
+	datasetId, err := strconv.Atoi(ctx.PathParam("id"))
+	if err != nil {
+		ctx.Logger.Errorf("error path param id: %v", err)
+		return nil, errUpdateRecord
+	}
+	recordId, err := strconv.Atoi(ctx.PathParam("recordId"))
+	if err != nil {
+		ctx.Logger.Errorf("error path param record id: %v", err)
+		return nil, errUpdateRecord
+	}
 
-	return nil, nil
+	var fields map[string]interface{}
+	if err := ctx.Bind(&fields); err != nil {
+		ctx.Logger.Errorf("error binding fields: %v", err)
+		return nil, errUpdateRecord
+	}
+	var updates []string
+	// TODO: Sanitize
+	for key, value := range fields {
+		updates = append(updates, fmt.Sprintf("%s = '%s'", key, value))
+	}
+
+	query := fmt.Sprintf(queryUpdateRecord, datasetId, strings.Join(updates, ", "))
+	_, err = ctx.SQL.ExecContext(ctx, query, recordId)
+	if err != nil {
+		ctx.Logger.Errorf("error update record: %v", err)
+		return nil, errUpdateRecord
+	}
+
+	row, err := ctx.SQL.QueryContext(ctx, fmt.Sprintf(querySelectRecord, datasetId), recordId)
+	if err != nil {
+		ctx.Logger.Errorf("error query dataset record: %v", err)
+		return nil, errGetRecord
+	}
+	var record Record
+	record = rowsToJson(ctx, row)[0]
+
+	return record, nil
 }
 
 func GetDatasetRecords(ctx *gofr.Context) (*DatasetContent, error) {

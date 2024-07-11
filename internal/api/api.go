@@ -12,7 +12,7 @@ func RegisterRoutes(app *gofr.App) {
 	app.POST("/api/datasets/{id}/fields", postDatasetField) // name, type
 	app.GET("/api/datasets/{id}/fields", getDatasetFields)  // name, type
 	app.GET("/api/datasets/{id}/records", getDatasetRecords)
-	//app.GET("/api/datasets/{id}/records/{recordId}", getDatasetRecord)
+	app.GET("/api/datasets/{id}/records/{recordId}", getDatasetRecord)
 	app.PUT("/api/datasets/{id}/records/{recordId}", putDatasetRecord)
 }
 
@@ -34,6 +34,9 @@ func getDatasetFields(ctx *gofr.Context) (interface{}, error) {
 
 func getDatasetRecords(ctx *gofr.Context) (interface{}, error) {
 	return records.GetDatasetRecords(ctx)
+}
+func getDatasetRecord(ctx *gofr.Context) (interface{}, error) {
+	return records.GetRecord(ctx)
 }
 
 func putDatasetRecord(ctx *gofr.Context) (interface{}, error) {
